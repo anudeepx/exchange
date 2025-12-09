@@ -1,30 +1,21 @@
-use crate::middlewares::auth::Auth;
-use crate::utils::jwt::{create_jwt};
+use crate::middleware::auth::Auth;
+use crate::utils::jwt::create_jwt;
+use actix_web::HttpMessage;
 use actix_web::{HttpResponse, web};
 use bcrypt::{hash, verify};
 use db::DbPool;
 use db::models::{NewUser, User};
 use db::schema::users::dsl::*;
 use diesel::prelude::*;
-use serde::{Deserialize, Serialize};
 use tracing::{error, info, warn};
-use uuid::Uuid;
-use actix_web::HttpMessage;
+use crate::types::auth_types::{LoginForm, RegisterForm};
+use crate::types::response_types::{ResponseMessage};
 
-#[derive(Deserialize)]
-pub struct RegisterRequest {
-    pub username: String,
-    pub password: String,
-}
 
-#[derive(Serialize)]
-pub struct AuthResponse {
-    pub user_id: Uuid,
-    pub token: String,
-}
-
-async fn register(pool: web::Data<DbPool>, req: web::Json<RegisterRequest>) -> HttpResponse {
+// POST /api/v1/auth/register
+async fn register(pool: web::Data<DbPool>, req: web::Json<RegisterForm>) -> HttpResponse {
     info!("Register attempt for username: {}", req.username);
+    info!("Register attempt for email: {}", req.email);
     let mut conn = match pool.get() {
         Ok(c) => c,
         Err(_) => return HttpResponse::InternalServerError().body("DB connection error"),
@@ -33,6 +24,7 @@ async fn register(pool: web::Data<DbPool>, req: web::Json<RegisterRequest>) -> H
     let hashed = hash(&req.password, 12).unwrap();
 
     let new_user = NewUser {
+        email: req.email.clone(),
         username: req.username.clone(),
         password_hash: hashed,
     };
@@ -44,10 +36,11 @@ async fn register(pool: web::Data<DbPool>, req: web::Json<RegisterRequest>) -> H
     match inserted {
         Ok(user) => {
             info!("✅ User registered: {}", user.username);
-            let token = create_jwt(user.id).unwrap_or_default();
-            HttpResponse::Ok().json(AuthResponse {
-                user_id: user.id,
-                token,
+            HttpResponse::Ok().json(ResponseMessage {
+                message: "Registration successful".to_string(),
+                status_code: 200,
+                token: None,
+                user_id: Some(user.id),
             })
         }
         Err(diesel::result::Error::DatabaseError(
@@ -64,15 +57,16 @@ async fn register(pool: web::Data<DbPool>, req: web::Json<RegisterRequest>) -> H
     }
 }
 
-async fn login(pool: web::Data<DbPool>, req: web::Json<RegisterRequest>) -> HttpResponse {
-    info!("Login attempt for username: {}", req.username);
+// POST /api/v1/auth/login
+async fn login(pool: web::Data<DbPool>, req: web::Json<LoginForm>) -> HttpResponse {
+    info!("Login attempt for username: {}", req.email);
     let mut conn = match pool.get() {
         Ok(c) => c,
         Err(_) => return HttpResponse::InternalServerError().body("DB connection error"),
     };
 
     let user = users
-        .filter(username.eq(&req.username))
+        .filter(email.eq(&req.email))
         .first::<User>(&mut conn);
 
     match user {
@@ -80,12 +74,14 @@ async fn login(pool: web::Data<DbPool>, req: web::Json<RegisterRequest>) -> Http
             if verify(&req.password, &u.password_hash).unwrap_or(false) {
                 info!("✅ User logged in: {}", u.username);
                 let token = create_jwt(u.id).unwrap_or_default();
-                HttpResponse::Ok().json(AuthResponse {
-                    user_id: u.id,
-                    token,
+                HttpResponse::Ok().json(ResponseMessage{
+                    user_id: Some(u.id),
+                    token: Some(token),
+                    message: "Login successful".to_string(),
+                    status_code: 200,
                 })
             } else {
-                warn!("User login failed: {}", req.username);
+                warn!("User login failed: {}", req.email);
                 HttpResponse::Unauthorized().body("Invalid credentials")
             }
         }
@@ -93,6 +89,7 @@ async fn login(pool: web::Data<DbPool>, req: web::Json<RegisterRequest>) -> Http
     }
 }
 
+// GET /api/v1/auth/me
 async fn me(req: actix_web::HttpRequest) -> HttpResponse {
     info!("Me request received");
 
@@ -107,7 +104,7 @@ async fn me(req: actix_web::HttpRequest) -> HttpResponse {
 
 pub fn init(cfg: &mut web::ServiceConfig) {
     cfg.service(
-        web::scope("/auth")
+        web::scope("")
             .route("/register", web::post().to(register))
             .route("/login", web::post().to(login))
             .service(web::scope("").wrap(Auth).route("/me", web::get().to(me))),

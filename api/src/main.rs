@@ -2,9 +2,10 @@ use actix_web::{App, HttpResponse, HttpServer, Responder, web};
 use db::establish_pool;
 use tracing_subscriber;
 
-mod middlewares;
+mod middleware;
 mod routes;
 mod utils;
+mod types;
 
 async fn health() -> impl Responder {
     HttpResponse::Ok().json(serde_json::json!({ "status": "ok" }))
@@ -18,6 +19,7 @@ async fn main() -> std::io::Result<()> {
 
     let addr = "127.0.0.1:3000";
     tracing::info!("🚀 API running at http://{}", addr);
+    println!("🚀 API running at http://{}", addr);
 
     HttpServer::new(move || {
         App::new()

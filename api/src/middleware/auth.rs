@@ -1,7 +1,7 @@
 use actix_web::{
-    Error, HttpResponse, HttpMessage,
+    Error, HttpMessage, HttpResponse,
+    body::{BoxBody, EitherBody},
     dev::{Service, ServiceRequest, ServiceResponse, Transform},
-    body::{EitherBody, BoxBody},
 };
 use futures_util::future::{LocalBoxFuture, Ready, ok};
 use std::rc::Rc;
@@ -57,7 +57,7 @@ where
                 .headers()
                 .get("Authorization")
                 .and_then(|h| h.to_str().ok())
-                .map(|h| h.replace("Bearer ", ""));
+                .and_then(|h| h.strip_prefix("Bearer ").map(str::to_string));
 
             if let Some(token) = token {
                 match verify_jwt(&token) {

@@ -18,3 +18,4 @@ tracing-subscriber = { version = "0.3", features = ["env-filter"] }
 uuid = { version = "1", features = ["v4", "serde"] }
 db = { path = "../db" }
 futures-util = "0.3.31"
+validator = { version = "0.20.0", features = ["derive"] }
