@@ -1,12 +1,13 @@
 use actix_web::{post, get, put, delete, web, HttpResponse, Responder};
+use crate::types::order_types::NewOrder;
 
 // POST /api/v1/orders
 #[post("/")]
 async fn create_order(
-    // userid: web::Path<String>,
-    
+    userid: web::Path<String>,
+    order: web::Json<NewOrder>,
 ) -> impl Responder {
-
+    
     HttpResponse::Ok().body("Place new order")
 }
 

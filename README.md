@@ -8,7 +8,7 @@
 </div>
 
 <div id="description" align="center">
-  A fast, modular <strong>Exchange</strong> backend written in Rust.
+  A fast, modular <strong>exchange</strong> backend written in Rust.
 </div>
 
 <br />
@@ -35,6 +35,37 @@ It is designed as a **pluggable architecture**:
 
 ## ❄️ Architecture
 
-<div align="center">
-  <img src="docs/architecture.png" alt="Architecture Diagram" width="720" />
-</div>
+```mermaid
+flowchart LR
+    Client[Client]
+
+    LB[Load Balancer]
+
+    API1[API Service]
+    API2[API Service]
+    API3[API Service]
+
+    Queue[Message Queue]
+
+    Engine[Matching Engine]
+
+    DB[(PostgreSQL)]
+    WS[WebSocket Service]
+    Backup[(Event Log Backup)]
+
+    Client --> LB
+
+    LB --> API1
+    LB --> API2
+    LB --> API3
+
+    API1 --> Queue
+    API2 --> Queue
+    API3 --> Queue
+
+    Queue --> Engine
+
+    Engine --> DB
+    Engine --> WS
+    Engine --> Backup
+```

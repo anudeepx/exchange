@@ -1,5 +1,5 @@
 pub mod auth;
-pub mod response;
+pub mod order;
 
 pub use auth as auth_types;
-pub use response as response_types;
+pub use order as order_types;

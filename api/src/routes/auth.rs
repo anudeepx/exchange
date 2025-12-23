@@ -7,9 +7,9 @@ use db::DbPool;
 use db::models::{NewUser, User};
 use db::schema::users::dsl::*;
 use diesel::prelude::*;
+use serde_json::json;
 use tracing::{error, info, warn};
 use crate::types::auth_types::{LoginForm, RegisterForm};
-use crate::types::response_types::{ResponseMessage};
 
 
 // POST /api/v1/auth/register
@@ -32,16 +32,15 @@ async fn register(pool: web::Data<DbPool>, req: web::Json<RegisterForm>) -> Http
     let inserted: Result<User, _> = diesel::insert_into(users)
         .values(&new_user)
         .get_result(&mut conn);
+    info!("Insert result: {}", inserted.is_ok());
 
     match inserted {
         Ok(user) => {
             info!("✅ User registered: {}", user.username);
-            HttpResponse::Ok().json(ResponseMessage {
-                message: "Registration successful".to_string(),
-                status_code: 200,
-                token: None,
-                user_id: Some(user.id),
-            })
+            HttpResponse::Ok().json(json!({
+                "message": "Registration successful",
+                "status_code": 200
+            }))
         }
         Err(diesel::result::Error::DatabaseError(
             diesel::result::DatabaseErrorKind::UniqueViolation,
@@ -74,12 +73,21 @@ async fn login(pool: web::Data<DbPool>, req: web::Json<LoginForm>) -> HttpRespon
             if verify(&req.password, &u.password_hash).unwrap_or(false) {
                 info!("✅ User logged in: {}", u.username);
                 let token = create_jwt(u.id).unwrap_or_default();
-                HttpResponse::Ok().json(ResponseMessage{
-                    user_id: Some(u.id),
-                    token: Some(token),
-                    message: "Login successful".to_string(),
-                    status_code: 200,
-                })
+
+                let cookie = actix_web::cookie::Cookie::build("auth_token", token.clone())
+                    .path("/")
+                    .http_only(true)
+                    .finish();
+
+                HttpResponse::Ok()
+                    .cookie(cookie)
+                    .json(json!({
+                     "user_id": u.id,
+                     "token": token,
+                     "message": "Login successful",
+                     "status_code": 200
+                }))
+
             } else {
                 warn!("User login failed: {}", req.email);
                 HttpResponse::Unauthorized().body("Invalid credentials")
