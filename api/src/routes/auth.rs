@@ -1,4 +1,5 @@
 use crate::middleware::auth::Auth;
+use crate::types::auth_types::{LoginForm, RegisterForm};
 use crate::utils::jwt::create_jwt;
 use actix_web::HttpMessage;
 use actix_web::{HttpResponse, web};
@@ -9,8 +10,6 @@ use db::schema::users::dsl::*;
 use diesel::prelude::*;
 use serde_json::json;
 use tracing::{error, info, warn};
-use crate::types::auth_types::{LoginForm, RegisterForm};
-
 
 // POST /api/v1/auth/register
 async fn register(pool: web::Data<DbPool>, req: web::Json<RegisterForm>) -> HttpResponse {
@@ -64,9 +63,7 @@ async fn login(pool: web::Data<DbPool>, req: web::Json<LoginForm>) -> HttpRespon
         Err(_) => return HttpResponse::InternalServerError().body("DB connection error"),
     };
 
-    let user = users
-        .filter(email.eq(&req.email))
-        .first::<User>(&mut conn);
+    let user = users.filter(email.eq(&req.email)).first::<User>(&mut conn);
 
     match user {
         Ok(u) => {
@@ -79,15 +76,12 @@ async fn login(pool: web::Data<DbPool>, req: web::Json<LoginForm>) -> HttpRespon
                     .http_only(true)
                     .finish();
 
-                HttpResponse::Ok()
-                    .cookie(cookie)
-                    .json(json!({
+                HttpResponse::Ok().cookie(cookie).json(json!({
                      "user_id": u.id,
                      "token": token,
                      "message": "Login successful",
                      "status_code": 200
                 }))
-
             } else {
                 warn!("User login failed: {}", req.email);
                 HttpResponse::Unauthorized().body("Invalid credentials")

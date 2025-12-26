@@ -57,26 +57,35 @@ where
                 .headers()
                 .get("Authorization")
                 .and_then(|h| h.to_str().ok())
-                .and_then(|h| h.strip_prefix("Bearer ").map(str::to_string));
+                .and_then(|h| h.strip_prefix("Bearer "))
+                .map(str::to_owned)
+                .or_else(|| req.cookie("auth_token").map(|c| c.value().to_owned()));
 
-            if let Some(token) = token {
-                match verify_jwt(&token) {
-                    Ok(claims) => {
-                        req.extensions_mut().insert(claims);
-                        info!("✅ Authenticated request");
-                        return svc.call(req).await.map(|res| res.map_into_right_body());
-                    }
-                    Err(_) => {
-                        return Ok(req
-                            .into_response(HttpResponse::Unauthorized().body("Invalid token"))
-                            .map_into_left_body());
-                    }
+            let token = match token {
+                Some(t) => t,
+                None => {
+                    return Ok(req
+                        .into_response(HttpResponse::Unauthorized().json(serde_json::json!({
+                            "error": "missing_token"
+                        })))
+                        .map_into_left_body());
+                }
+            };
+
+            match verify_jwt(&token) {
+                Ok(claims) => {
+                    req.extensions_mut().insert(claims);
+                    svc.call(req).await.map(|res| res.map_into_right_body())
+                }
+                Err(e) => {
+                    tracing::warn!("JWT verification failed: {:?}", e);
+                    Ok(req
+                        .into_response(HttpResponse::Unauthorized().json(serde_json::json!({
+                            "error": "invalid_token"
+                        })))
+                        .map_into_left_body())
                 }
             }
-
-            Ok(req
-                .into_response(HttpResponse::Unauthorized().body("Missing token"))
-                .map_into_left_body())
         })
     }
 }

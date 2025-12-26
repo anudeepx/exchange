@@ -3,9 +3,10 @@ use db::establish_pool;
 use tracing_subscriber;
 
 mod middleware;
+mod redis;
 mod routes;
-mod utils;
 mod types;
+mod utils;
 
 async fn health() -> impl Responder {
     HttpResponse::Ok().json(serde_json::json!({ "status": "ok" }))

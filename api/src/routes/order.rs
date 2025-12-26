@@ -1,14 +1,27 @@
-use actix_web::{post, get, put, delete, web, HttpResponse, Responder};
-use crate::types::order_types::NewOrder;
+use crate::types::{
+    order_types::NewOrder,
+    redis_types::{CreateOrderData, MessageToEngine, RedisManager},
+};
+use actix_web::{HttpResponse, Responder, delete, get, post, put, web};
 
 // POST /api/v1/orders
 #[post("/")]
-async fn create_order(
-    userid: web::Path<String>,
-    order: web::Json<NewOrder>,
-) -> impl Responder {
-    
-    HttpResponse::Ok().body("Place new order")
+async fn create_order(userid: web::Path<String>, order: web::Json<NewOrder>) -> impl Responder {
+    let redis_manager = RedisManager::get_instance().lock().unwrap();
+    let request_body = body.into_inner();
+
+    let message = MessageToEngine::CreateOrder {
+        data: CreateOrderData {
+            market: request_body.market,
+            price: request_body.price,
+            quantity: request_body.quantity,
+            side: request_body.side,
+        },
+    };
+    match redis_manager.send_message_to_engine(message).await {
+        Ok(response) => HttpResponse::Ok().json(response),
+        Err(e) => HttpResponse::InternalServerError().body(format!("Error: {}", e)),
+    }
 }
 
 // GET /api/v1/orders
