@@ -1,40 +1,17 @@
-# Rust build
-/target/
-**/*.rs.bk
+# Go build
+/bin/
+/dist/
+*.exe
+*.exe~
+*.dll
+*.so
+*.so.*
+*.dylib
 
-**/target/*
-**/target/**
+# Go dependencies
+vendor/
+go.sum
 
-api/target/
-db/target/
-ws/target/
-engine/target/
-
-api/.env
-db/.env
-ws/.env
-engine/.env
-
-# Cargo package files
-Cargo.lock
-
-# IDE files
-.idea/
-.vscode/
-
-# OS generated files
-.DS_Store
-Thumbs.db
-
-# Logs
-*.log
-
-# Byebug command history
-.byebug_history
-
-# Misc
-*.tgz
-*.zip
-
-# Coverage
-coverage/
+.env.*
+.env.local
+.env.development.local
