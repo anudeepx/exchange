@@ -1,11 +1,4 @@
-<div id="logo" align="center">
-  <a href="https://github.com/0x4nud33p/exchange">
-    <picture>
-      <img alt="Exchange" src="./docs/logo.svg" width="376" height="100" />
-    </picture>
-  </a>
-  <br />
-</div>
+
 
 <div id="description" align="center">
   A fast, modular <strong>exchange</strong> backend written in Rust.
