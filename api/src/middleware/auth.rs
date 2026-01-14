@@ -7,7 +7,6 @@ use futures_util::future::{LocalBoxFuture, Ready, ok};
 use std::rc::Rc;
 
 use crate::utils::jwt::verify_jwt;
-use tracing::info;
 
 pub struct Auth;
 

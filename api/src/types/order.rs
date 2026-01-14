@@ -1,16 +1,16 @@
 use serde::{Deserialize, Serialize};
+use exchange_types::OrderSide;
 
 #[derive(Serialize, Deserialize)]
 pub struct NewOrder {
-    pub market: String,
-    pub price: String,
-    pub quantity: String,
-    #[serde(rename = "side")] // Rename to avoid conflict with reserved keyword
+    pub market: String,   // e.g., "BTC-USD"
+    pub price: String,    // String to represent decimal values precisely ex: "45000.50"
+    pub quantity: String, // String to represent decimal values precisely ex: "0.005"
+    #[serde(rename = "side")]
     pub side: OrderSide,
 }
 
-#[derive(Serialize, Deserialize)]
-pub enum OrderSide {
-    Buy,
-    Sell,
+#[derive(Deserialize)]
+pub struct OpenOrdersQuery {
+    pub market: String,
 }
